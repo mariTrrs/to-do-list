@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,9 +26,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -67,11 +73,33 @@ fun ListaTarefasContent(
     onNovaTarefa: () -> Unit,
     onEditarTarefa: (Int) -> Unit,
     onCheckedChange: (Tarefa, Boolean) -> Unit,
-    onDeletar: (Tarefa) -> Unit
+    onDeletar: (Tarefa) -> Unit,
+    tarefaParaExcluirInicial: Tarefa? = null
 ) {
+    var tarefaParaExcluir by remember(tarefaParaExcluirInicial) {
+        mutableStateOf(tarefaParaExcluirInicial)
+    }
+
+    tarefaParaExcluir?.let { tarefa ->
+        ConfirmacaoExclusaoDialog(
+            tituloTarefa = tarefa.titulo,
+            onCancelar = { tarefaParaExcluir = null },
+            onExcluir = {
+                onDeletar(tarefa)
+                tarefaParaExcluir = null
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Minhas Tarefas") })
+            TopAppBar(
+                title = { Text("Minhas Tarefas") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onNovaTarefa) {
@@ -101,7 +129,7 @@ fun ListaTarefasContent(
                         tarefa = tarefa,
                         onCheckedChange = { concluida -> onCheckedChange(tarefa, concluida) },
                         onEditar = { onEditarTarefa(tarefa.id) },
-                        onDeletar = { onDeletar(tarefa) }
+                        onDeletar = { tarefaParaExcluir = tarefa }
                     )
                 }
             }
@@ -159,6 +187,31 @@ private fun TarefaItem(
             }
         }
     }
+}
+
+@Composable
+private fun ConfirmacaoExclusaoDialog(
+    tituloTarefa: String,
+    onCancelar: () -> Unit,
+    onExcluir: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text("Excluir tarefa") },
+        text = {
+            Text("A tarefa \"$tituloTarefa\" será excluída. Esta ação não pode ser desfeita.")
+        },
+        confirmButton = {
+            TextButton(onClick = onExcluir) {
+                Text("Excluir")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancelar) {
+                Text("Cancelar")
+            }
+        }
+    )
 }
 
 @Preview(showBackground = true, name = "Lista com tarefas")
@@ -231,5 +284,37 @@ private fun TarefaItemAtrasadaPreview() {
         onCheckedChange = {},
         onEditar = {},
         onDeletar = {}
+    )
+}
+
+@Preview(showBackground = true, name = "Confirmação de exclusão")
+@Composable
+private fun ListaTarefasContentConfirmacaoExclusaoPreview() {
+    val tarefa = Tarefa(
+        id = 1,
+        titulo = "Estudar Room",
+        descricao = "Revisar anotações e DAO",
+        concluida = false
+    )
+    ListaTarefasContent(
+        tarefas = listOf(
+            tarefa,
+            Tarefa(id = 2, titulo = "Enviar atividade", descricao = "Upload no portal", concluida = true)
+        ),
+        onNovaTarefa = {},
+        onEditarTarefa = {},
+        onCheckedChange = { _, _ -> },
+        onDeletar = {},
+        tarefaParaExcluirInicial = tarefa
+    )
+}
+
+@Preview(showBackground = true, name = "Diálogo de exclusão")
+@Composable
+private fun ConfirmacaoExclusaoDialogPreview() {
+    ConfirmacaoExclusaoDialog(
+        tituloTarefa = "Estudar Room",
+        onCancelar = {},
+        onExcluir = {}
     )
 }
